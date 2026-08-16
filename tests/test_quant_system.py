@@ -38,6 +38,14 @@ from quant_system.alerts import Alert, AlertManager, AlertSeverity, MemoryAlertS
 from quant_system.evidence import RuntimeEvidenceStore
 from quant_system.exchange import UserEventKind
 from quant_system.rate_limit import AsyncExchangeRateLimiter, RateLimitPolicy
+from quant_system.research import (
+    CandidateSpec,
+    ResearchPolicy,
+    StrategyResearchPipeline,
+    deflated_sharpe_ratio,
+    minimum_track_record_length,
+    probability_of_backtest_overfitting,
+)
 from quant_system.providers import CachedMarketDataProvider, MarketDataProvider, TushareProvider
 from quant_system.providers import BinanceSpotProvider, CoinbaseSpotProvider, MarketDataError, PublicCryptoProvider
 from quant_system.instruments import get_instrument
@@ -186,6 +194,56 @@ class BacktestTests(unittest.TestCase):
         self.assertIn("sharpe_ratio", result["metrics"])
         self.assertIn("orders", result)
         self.assertIn("fills", result)
+
+
+class ResearchValidationTests(unittest.TestCase):
+    def test_overfit_statistics_are_deterministic_and_degrade_without_enough_trials(self):
+        selected = [0.002, -0.001, 0.003, 0.001, -0.0005] * 40
+        trial_sharpes = [0.01, 0.02, 0.03]
+        dsr, benchmark = deflated_sharpe_ratio(selected, trial_sharpes)
+        self.assertGreaterEqual(dsr, 0)
+        self.assertLessEqual(dsr, 1)
+        self.assertGreaterEqual(benchmark, 0)
+        self.assertIsNotNone(minimum_track_record_length(selected))
+        self.assertIsNone(probability_of_backtest_overfitting([[0.01, 0.02, 0.03]] * 40))
+
+    def test_pipeline_exports_trials_and_binds_exact_governance_fingerprint(self):
+        bars = generate_market_data(260, seed=17)
+        candidates = [
+            CandidateSpec("ma_cross", {"short_window": 5, "long_window": 20}, "ma-5-20"),
+            CandidateSpec("rsi_reversion", {"window": 14, "buy_below": 30, "sell_above": 70}, "rsi"),
+            CandidateSpec("bollinger", {"window": 20, "std_multiplier": 2.0}, "bollinger"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            report = StrategyResearchPipeline(
+                ResearchPolicy(walk_forward_window=30, cost_multipliers=(1.0, 2.0))
+            ).run("BTC/USDT", {"BTC/USDT": bars}, candidates, Path(directory))
+            self.assertFalse(report.passed)
+            self.assertIsNone(report.pbo)
+            self.assertTrue(any("PBO" in reason for reason in report.failures))
+            self.assertTrue((Path(directory) / "selected_returns.csv").exists())
+            self.assertTrue((Path(directory) / "trials_matrix.csv").exists())
+            self.assertTrue((Path(directory) / "research_report.json").exists())
+
+            governance = StrategyGovernanceService(
+                criteria=ValidationCriteria(require_research_report=True),
+                storage_path=Path(directory) / "governance.db",
+            )
+            record = governance.propose(StrategyProposal(
+                report.selected_strategy_name,
+                report.selected_parameters,
+                "pipeline-selected candidate",
+                proposed_by="HUMAN_OPERATOR",
+            ))
+            validation = governance.record_research_validation(record.proposal.version_id, report)
+            self.assertFalse(validation.passed)
+            with self.assertRaises(ValueError):
+                governance.promote(record.proposal.version_id, RolloutStage.VALIDATED)
+            tampered = report.to_dict()
+            tampered["selected_fingerprint"] = "0" * 64
+            with self.assertRaises(ValueError):
+                governance.record_research_validation(record.proposal.version_id, tampered)
+            governance.close()
 
 
 class OrderManagementTests(unittest.TestCase):

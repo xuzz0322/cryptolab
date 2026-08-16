@@ -177,6 +177,21 @@ AI禁止：
 
 策略版本包含参数指纹、验证报告和不可省略的晋级审计，存储在SQLite。
 
+### 统计研究门禁
+
+```mermaid
+flowchart LR
+    PRE[预注册候选 N>=10] --> SPLIT[时间切分 Train / Validation / Final Test]
+    SPLIT --> SELECT[只在Validation选择]
+    SELECT --> MATRIX[逐期收益与Trials Matrix]
+    MATRIX --> STAT[DSR / PBO / Holm Haircut / MinTRL]
+    STAT --> STRESS[成本压力 / Walk-forward / 跨币种]
+    STRESS --> REPORT[指纹绑定Research Report]
+    REPORT --> GOV[Strategy Governance]
+```
+
+最终测试集不是调参集。每次查看最终测试结果都必须计入真实试验次数；少报候选、删除失败版本或根据测试结果修改阈值均视为研究失败。当前规则策略没有重叠标签，未来AI标签若覆盖`[t,t+h]`，还必须使用purge与embargo避免相邻折泄漏。
+
 ## 分阶段上线门禁
 
 ```text
@@ -240,6 +255,7 @@ await engine.run()
 | REST API限流器 | `quant_system/rate_limit.py` |
 | 外部告警 | `quant_system/alerts.py` |
 | 长时间运行证据 | `quant_system/evidence.py` |
+| 过拟合研究流水线 | `quant_system/research.py`、`research_config.example.json` |
 
 ## 当前边界
 

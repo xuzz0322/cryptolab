@@ -40,6 +40,7 @@ class ValidationCriteria:
     minimum_trades: int = 1
     minimum_sharpe: float = -0.25
     maximum_drawdown: float = 0.20
+    require_research_report: bool = False
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,7 @@ class ValidationReport:
     bars: int
     fingerprint: str
     validated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    research_report: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -185,8 +187,11 @@ class StrategyGovernanceService:
         if actor_role.upper().startswith("AI"):
             raise PermissionError("AI只能提案和验证，不能晋级或部署策略")
         record = self.get(version_id)
-        if target == RolloutStage.VALIDATED and (not record.validation or not record.validation.passed):
-            raise ValueError("策略版本尚未通过确定性验证")
+        if target == RolloutStage.VALIDATED:
+            if not record.validation or not record.validation.passed:
+                raise ValueError("策略版本尚未通过确定性验证")
+            if self.criteria.require_research_report and not record.validation.research_report:
+                raise ValueError("策略版本缺少过拟合研究报告")
         decision = self.gate.evaluate(record.stage, target, evidence or DeploymentEvidence())
         if not decision.approved:
             raise ValueError("部署门禁拒绝：" + "；".join(decision.reasons))
@@ -204,6 +209,34 @@ class StrategyGovernanceService:
         )
         self._persist(record)
         return record
+
+    def record_research_validation(self, version_id: str, research_report: Any) -> ValidationReport:
+        """Bind a pipeline report to the exact immutable strategy fingerprint."""
+        record = self.get(version_id)
+        payload = research_report.to_dict() if hasattr(research_report, "to_dict") else dict(research_report)
+        if payload.get("selected_fingerprint") != record.proposal.fingerprint:
+            raise ValueError("研究报告与策略参数指纹不匹配")
+        failures = list(payload.get("failures", []))
+        passed = bool(payload.get("passed")) and not failures
+        report = ValidationReport(
+            version_id=version_id,
+            passed=passed,
+            failures=failures,
+            metrics=dict(payload.get("test_metrics", {})),
+            bars=int(payload.get("observations", 0)),
+            fingerprint=record.proposal.fingerprint,
+            research_report=payload,
+        )
+        record.validation = report
+        record.audit_log.append({
+            "action": "RESEARCH_VALIDATED",
+            "actor": "STATISTICAL_VALIDATOR",
+            "passed": passed,
+            "candidate_count": payload.get("candidate_count", 0),
+            "at": report.validated_at,
+        })
+        self._persist(record)
+        return report
 
     def get(self, version_id: str) -> StrategyVersionRecord:
         if version_id not in self.records:

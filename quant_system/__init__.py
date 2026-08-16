@@ -49,6 +49,16 @@ from .governed_runtime import GovernedTradingSession
 from .alerts import Alert, AlertManager, AlertSeverity, MemoryAlertSink, WebhookAlertSink
 from .evidence import RuntimeEvidenceStore
 from .rate_limit import AsyncExchangeRateLimiter, RateLimitPolicy
+from .research import (
+    CandidateSpec,
+    ResearchPolicy,
+    ResearchReport,
+    StrategyResearchPipeline,
+    annual_sharpe,
+    deflated_sharpe_ratio,
+    minimum_track_record_length,
+    probability_of_backtest_overfitting,
+)
 from .strategies import STRATEGIES, create_strategy
 
 __all__ = [
@@ -131,6 +141,14 @@ __all__ = [
     "RuntimeEvidenceStore",
     "AsyncExchangeRateLimiter",
     "RateLimitPolicy",
+    "CandidateSpec",
+    "ResearchPolicy",
+    "ResearchReport",
+    "StrategyResearchPipeline",
+    "annual_sharpe",
+    "deflated_sharpe_ratio",
+    "minimum_track_record_length",
+    "probability_of_backtest_overfitting",
     "STRATEGIES",
     "create_strategy",
     "generate_market_data",

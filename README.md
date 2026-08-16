@@ -376,6 +376,47 @@ await runner.run()
 
 AI训练必须与在线推理解耦。推荐离线完成标签构造、时间序列切分、训练和模型版本登记；在线服务只加载固定版本模型。禁止把未来收益、未来K线或尚未结束的K线放入特征，避免数据泄漏。
 
+## 策略研究与过拟合门禁
+
+`quant_system.research`提供独立于交易运行时的统计研究流水线：
+
+- 按时间顺序固定划分50%研究、25%验证、25%最终测试，禁止随机打乱；
+- 只在验证集选择预注册候选，最终测试集用于一次性审计；
+- 导出选中策略逐日收益和所有候选的`T×N`收益矩阵；
+- 计算PSR/DSR、CSCV PBO、Holm多重检验折损Sharpe和Minimum Track Record Length；
+- 执行1倍、1.5倍、2倍成本压力测试；
+- 报告90日walk-forward窗口和BTC/ETH/SOL跨币种稳健性；
+- 币圈日频使用365期年化；少于10个候选时PBO不伪造结果，报告直接失败；
+- 报告与候选参数SHA-256指纹绑定，失败报告不能通过策略治理晋级。
+
+先下载三个币对的同区间数据：
+
+```bash
+python3 -m quant_system.crypto_data --symbol BTC/USDT --start 2021-01-01 --end 2026-08-15 --output data/BTC_USDT.csv
+python3 -m quant_system.crypto_data --symbol ETH/USDT --start 2021-01-01 --end 2026-08-15 --output data/ETH_USDT.csv
+python3 -m quant_system.crypto_data --symbol SOL/USDT --start 2021-01-01 --end 2026-08-15 --output data/SOL_USDT.csv
+```
+
+复制并冻结预注册配置。运行后不能根据最终测试集结果修改同一轮配置：
+
+```bash
+cp research_config.example.json runtime/research_config_v1.json
+python3 -m quant_system.research \
+  --config runtime/research_config_v1.json \
+  --output-dir runtime/research-v1
+```
+
+未通过时命令退出码为2，这是统计门禁的正常行为。输出包括：
+
+```text
+runtime/research-v1/
+├── research_report.json
+├── selected_returns.csv
+└── trials_matrix.csv
+```
+
+只有`research_report.json`中的`passed`为`true`时，才能把报告绑定到完全相同的策略指纹。治理服务应使用`ValidationCriteria(require_research_report=True)`并调用`record_research_validation()`；修改任何策略参数都会导致指纹不匹配。服务器包若命名为`cryptolab`，将上述命令中的`quant_system`替换为`cryptolab`。
+
 ## 保留的 A 股迁移接口
 
 股票不是当前默认市场，但 `AShareRules` 和 Tushare 历史行情适配器仍然保留，作为系统成熟后迁移股票市场的插件。Token 只通过环境变量设置：
