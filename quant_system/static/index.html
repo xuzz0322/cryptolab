@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CryptoLab · 数字资产量化研究台</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark">₿</span><span>CryptoLab</span></a>
+    <div class="status"><span class="status-dot"></span>SPOT ENGINE / 24×7</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">CRYPTO SPOT RESEARCH CONSOLE</p>
+        <h1>全天候市场，<br><em>可验证的策略。</em></h1>
+        <p class="intro">虚拟币现货事件驱动回测、币对精度、T+0账户、Maker/Taker费用、订单管理与风险熔断。</p>
+      </div>
+      <div class="hero-meta"><span>MARKET</span><b>CRYPTO SPOT</b><span>SESSION</span><b>24 × 7</b><span>ENGINE</span><b>EVENT-DRIVEN</b></div>
+    </section>
+
+    <section class="workspace">
+      <aside class="panel controls">
+        <div class="panel-title"><span>01</span><h2>实验参数</h2></div>
+        <label>币对<select id="symbol"><option>BTC/USDT</option><option>ETH/USDT</option><option>SOL/USDT</option></select></label>
+        <label>行情来源<select id="dataSource"><option value="synthetic">离线模拟行情</option><option value="public">公共交易所日线</option></select></label>
+        <div id="realDates" class="param-grid hidden"><label>开始日期<input id="startDate" type="date" value="2023-01-01"></label><label>结束日期<input id="endDate" type="date" value="2026-08-01"></label></div>
+        <label>交易策略<select id="strategy"></select></label>
+        <div id="strategyParams" class="param-grid"></div>
+        <div class="divider"></div>
+        <label>初始资金<input id="initialCash" type="number" value="100000" min="1000"></label>
+        <label>样本交易日<input id="days" type="number" value="520" min="100" max="2500"></label>
+        <label>随机种子<input id="seed" type="number" value="42"></label>
+        <label>最大仓位 <output id="weightOut">95%</output><input id="maxWeight" type="range" value="95" min="10" max="100"></label>
+        <label>止损线 <output id="stopOut">8%</output><input id="stopLoss" type="range" value="8" min="1" max="30"></label>
+        <details><summary>交易成本与币对规则</summary><label>Taker费率（bp）<input id="commission" type="number" value="10" min="0"></label><label>Maker费率（bp）<input id="makerFee" type="number" value="8" min="0"></label><label>滑点（bp）<input id="slippage" type="number" value="5" min="0"></label><label>最低名义金额（USDT）<input id="minNotional" type="number" value="5" min="0"></label><input id="minCommission" type="hidden" value="0"><input id="sellTax" type="hidden" value="0"><input id="lotSize" type="hidden" value="0.00001"></details>
+        <details><summary>组合风控</summary><label>单日亏损熔断（%）<input id="dailyLoss" type="number" value="5" min="1" max="50"></label><label>最大回撤熔断（%）<input id="drawdownHalt" type="number" value="20" min="1" max="80"></label><label>成交量参与率（%）<input id="volumeParticipation" type="number" value="10" min="1" max="100"></label></details>
+        <button id="runButton"><span>运行回测</span><span>↗</span></button>
+        <p id="error" class="error" role="alert"></p>
+      </aside>
+
+      <div class="results">
+        <section class="metric-grid" id="metrics"></section>
+        <section class="panel chart-panel">
+          <div class="panel-title chart-heading"><div><span>02</span><h2>净值曲线</h2></div><div class="legend"><i class="strategy-line"></i>策略 <i class="benchmark-line"></i>基准</div></div>
+          <canvas id="equityChart" height="330"></canvas>
+          <div id="chartTooltip" class="tooltip"></div>
+        </section>
+        <section class="lower-grid">
+          <div class="panel drawdown-panel"><div class="panel-title"><span>03</span><h2>回撤水下图</h2></div><canvas id="drawdownChart" height="180"></canvas></div>
+          <div class="panel trades-panel"><div class="panel-title"><span>04</span><h2>最近成交</h2></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>方向</th><th>数量</th><th>价格</th><th>原因</th></tr></thead><tbody id="trades"></tbody></table></div></div>
+        </section>
+        <section class="panel orders-history">
+          <div class="panel-title"><span>05</span><h2>订单生命周期</h2></div>
+          <div class="table-wrap"><table><thead><tr><th>订单号</th><th>日期</th><th>方向</th><th>类型</th><th>委托/成交</th><th>均价</th><th>状态</th><th>拒绝原因</th></tr></thead><tbody id="orders"></tbody></table></div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <footer><span>CRYPTOLAB / SPOT BACKTESTING SYSTEM</span><span>24×7 · T+0 · OMS 状态机 · 币对精度 · 风控熔断</span></footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

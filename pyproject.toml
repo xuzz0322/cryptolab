@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-starter"
+version = "0.1.0"
+description = "A dependency-free educational quantitative trading and backtesting system"
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+live = ["websockets>=12,<16"]
+
+[tool.setuptools.packages.find]
+include = ["quant_system*"]
