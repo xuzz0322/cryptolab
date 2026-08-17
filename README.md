@@ -382,7 +382,7 @@ AI训练必须与在线推理解耦。推荐离线完成标签构造、时间序
 
 - 按时间顺序固定划分50%研究、25%验证、25%最终测试，禁止随机打乱；
 - 只在验证集选择预注册候选，最终测试集用于一次性审计；
-- 导出选中策略逐日收益和所有候选的`T×N`收益矩阵；
+- 导出选中策略逐日收益和所有候选的`T×N`收益矩阵；历史上已经看过结果的参数也必须纳入，不能少报试验次数；
 - 计算PSR/DSR、CSCV PBO、Holm多重检验折损Sharpe和Minimum Track Record Length；
 - 执行1倍、1.5倍、2倍成本压力测试；
 - 报告90日walk-forward窗口和BTC/ETH/SOL跨币种稳健性；
@@ -400,7 +400,7 @@ python3 -m quant_system.crypto_data --symbol SOL/USDT --start 2021-01-01 --end 2
 复制并冻结预注册配置。运行后不能根据最终测试集结果修改同一轮配置：
 
 ```bash
-cp research_config.example.json runtime/research_config_v1.json
+cp --update=none research_config.example.json runtime/research_config_v1.json
 python3 -m quant_system.research \
   --config runtime/research_config_v1.json \
   --output-dir runtime/research-v1

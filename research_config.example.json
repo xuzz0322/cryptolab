@@ -8,6 +8,7 @@
   "candidates": [
     {"label": "ma-10-40", "strategy_name": "ma_cross", "parameters": {"short_window": 10, "long_window": 40}},
     {"label": "ma-15-60", "strategy_name": "ma_cross", "parameters": {"short_window": 15, "long_window": 60}},
+    {"label": "ma-20-60-prior", "strategy_name": "ma_cross", "parameters": {"short_window": 20, "long_window": 60}},
     {"label": "ma-20-80", "strategy_name": "ma_cross", "parameters": {"short_window": 20, "long_window": 80}},
     {"label": "ma-30-120", "strategy_name": "ma_cross", "parameters": {"short_window": 30, "long_window": 120}},
     {"label": "rsi-10", "strategy_name": "rsi_reversion", "parameters": {"window": 10, "buy_below": 30, "sell_above": 70}},

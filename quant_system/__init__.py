@@ -1,5 +1,7 @@
 """Educational quantitative research and backtesting toolkit."""
 
+from importlib import import_module
+
 from .backtest import BacktestEngine
 from .data import generate_market_data, load_csv
 from .models import BacktestConfig, Bar
@@ -49,17 +51,28 @@ from .governed_runtime import GovernedTradingSession
 from .alerts import Alert, AlertManager, AlertSeverity, MemoryAlertSink, WebhookAlertSink
 from .evidence import RuntimeEvidenceStore
 from .rate_limit import AsyncExchangeRateLimiter, RateLimitPolicy
-from .research import (
-    CandidateSpec,
-    ResearchPolicy,
-    ResearchReport,
-    StrategyResearchPipeline,
-    annual_sharpe,
-    deflated_sharpe_ratio,
-    minimum_track_record_length,
-    probability_of_backtest_overfitting,
-)
 from .strategies import STRATEGIES, create_strategy
+
+_RESEARCH_EXPORTS = {
+    "CandidateSpec",
+    "ResearchPolicy",
+    "ResearchReport",
+    "StrategyResearchPipeline",
+    "annual_sharpe",
+    "deflated_sharpe_ratio",
+    "minimum_track_record_length",
+    "probability_of_backtest_overfitting",
+}
+
+
+def __getattr__(name):
+    # Avoid pre-importing quant_system.research when it is executed with
+    # ``python -m quant_system.research``; eager import triggers a runpy warning.
+    if name in _RESEARCH_EXPORTS:
+        value = getattr(import_module(".research", __name__), name)
+        globals()[name] = value
+        return value
+    raise AttributeError("module %r has no attribute %r" % (__name__, name))
 
 __all__ = [
     "BacktestEngine",
