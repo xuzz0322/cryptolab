@@ -93,7 +93,7 @@ class BinanceSpotProvider(MarketDataProvider):
             if not payload:
                 break
             for item in payload:
-                trading_date = datetime.utcfromtimestamp(int(item[0]) / 1000).date()
+                trading_date = datetime.fromtimestamp(int(item[0]) / 1000, tz=timezone.utc).date()
                 if start <= trading_date <= end:
                     bars.append(
                         Bar(

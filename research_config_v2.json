@@ -1,0 +1,52 @@
+{
+  "primary_symbol": "BTC/USDT",
+  "datasets": {
+    "BTC/USDT": "data/BTC_USDT.csv",
+    "ETH/USDT": "data/ETH_USDT.csv",
+    "SOL/USDT": "data/SOL_USDT.csv"
+  },
+  "candidates": [
+    {"label": "ma-10-40", "strategy_name": "ma_cross", "parameters": {"short_window": 10, "long_window": 40}},
+    {"label": "ma-15-60", "strategy_name": "ma_cross", "parameters": {"short_window": 15, "long_window": 60}},
+    {"label": "ma-20-60-prior", "strategy_name": "ma_cross", "parameters": {"short_window": 20, "long_window": 60}},
+    {"label": "ma-20-80", "strategy_name": "ma_cross", "parameters": {"short_window": 20, "long_window": 80}},
+    {"label": "ma-30-120", "strategy_name": "ma_cross", "parameters": {"short_window": 30, "long_window": 120}},
+    {"label": "rsi-10", "strategy_name": "rsi_reversion", "parameters": {"window": 10, "buy_below": 30, "sell_above": 70}},
+    {"label": "rsi-14", "strategy_name": "rsi_reversion", "parameters": {"window": 14, "buy_below": 30, "sell_above": 70}},
+    {"label": "rsi-21", "strategy_name": "rsi_reversion", "parameters": {"window": 21, "buy_below": 30, "sell_above": 70}},
+    {"label": "boll-15-2", "strategy_name": "bollinger", "parameters": {"window": 15, "std_multiplier": 2.0}},
+    {"label": "boll-20-2", "strategy_name": "bollinger", "parameters": {"window": 20, "std_multiplier": 2.0}},
+    {"label": "boll-30-2.5", "strategy_name": "bollinger", "parameters": {"window": 30, "std_multiplier": 2.5}},
+    {"label": "regime-120-60", "strategy_name": "regime_trend", "parameters": {"long_window": 120, "momentum_window": 60, "volatility_window": 20, "entry_momentum": 0.03, "exit_momentum": -0.02, "entry_trend_buffer": 0.01, "exit_trend_buffer": 0.01, "max_annualized_volatility": 0.9, "exit_volatility_multiplier": 1.1, "target_weight": 1.0}},
+    {"label": "regime-150-90", "strategy_name": "regime_trend", "parameters": {"long_window": 150, "momentum_window": 90, "volatility_window": 20, "entry_momentum": 0.05, "exit_momentum": -0.02, "entry_trend_buffer": 0.01, "exit_trend_buffer": 0.01, "max_annualized_volatility": 0.9, "exit_volatility_multiplier": 1.1, "target_weight": 1.0}},
+    {"label": "regime-200-60", "strategy_name": "regime_trend", "parameters": {"long_window": 200, "momentum_window": 60, "volatility_window": 20, "entry_momentum": 0.03, "exit_momentum": -0.02, "entry_trend_buffer": 0.01, "exit_trend_buffer": 0.01, "max_annualized_volatility": 0.8, "exit_volatility_multiplier": 1.1, "target_weight": 1.0}},
+    {"label": "regime-200-90", "strategy_name": "regime_trend", "parameters": {"long_window": 200, "momentum_window": 90, "volatility_window": 20, "entry_momentum": 0.05, "exit_momentum": -0.02, "entry_trend_buffer": 0.01, "exit_trend_buffer": 0.01, "max_annualized_volatility": 0.8, "exit_volatility_multiplier": 1.1, "target_weight": 1.0}},
+    {"label": "regime-250-90", "strategy_name": "regime_trend", "parameters": {"long_window": 250, "momentum_window": 90, "volatility_window": 30, "entry_momentum": 0.05, "exit_momentum": -0.03, "entry_trend_buffer": 0.015, "exit_trend_buffer": 0.01, "max_annualized_volatility": 0.8, "exit_volatility_multiplier": 1.15, "target_weight": 1.0}},
+    {"label": "regime-300-120", "strategy_name": "regime_trend", "parameters": {"long_window": 300, "momentum_window": 120, "volatility_window": 30, "entry_momentum": 0.08, "exit_momentum": -0.03, "entry_trend_buffer": 0.015, "exit_trend_buffer": 0.015, "max_annualized_volatility": 0.7, "exit_volatility_multiplier": 1.15, "target_weight": 1.0}}
+  ],
+  "policy": {
+    "train_fraction": 0.5,
+    "validation_fraction": 0.25,
+    "periods_per_year": 365,
+    "minimum_test_sharpe": 0.5,
+    "maximum_test_drawdown": 0.15,
+    "minimum_dsr": 0.95,
+    "maximum_pbo": 0.5,
+    "minimum_haircut_sharpe": 0.5,
+    "minimum_candidates_for_pbo": 10,
+    "cscv_blocks": 8,
+    "walk_forward_window": 90,
+    "minimum_profitable_walk_forward_fraction": 0.6,
+    "cost_multipliers": [1.0, 1.5, 2.0],
+    "minimum_stressed_sharpe": 0.0,
+    "minimum_cross_assets": 2,
+    "historical_test_is_pristine": false
+  },
+  "backtest_config": {
+    "initial_cash": 100000,
+    "commission_rate": 0.001,
+    "slippage_rate": 0.0005,
+    "max_position_weight": 0.2,
+    "stop_loss_pct": 0.08
+  }
+}

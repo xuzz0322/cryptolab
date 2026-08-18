@@ -8,6 +8,8 @@ build/
 .coverage
 data/cache/
 data/crypto-cache/
+data/*.csv
+runtime/
 .env
 *.db
 *.db-shm
