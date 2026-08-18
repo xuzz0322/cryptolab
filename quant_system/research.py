@@ -194,6 +194,7 @@ class ResearchPolicy:
     cost_multipliers: Tuple[float, ...] = (1.0, 1.5, 2.0)
     minimum_stressed_sharpe: float = 0.0
     minimum_cross_assets: int = 0
+    historical_test_is_pristine: bool = True
 
     def validate(self) -> None:
         if not 0 < self.train_fraction < 1 or not 0 < self.validation_fraction < 1:
@@ -369,6 +370,11 @@ class StrategyResearchPipeline:
 
         failures: List[str] = []
         warnings: List[str] = []
+        if not self.policy.historical_test_is_pristine:
+            warnings.append(
+                "历史最终测试区间已被v1研究查看，v2历史报告只能作为统计审计，"
+                "真正最终证据依赖2026-08-15之后的前向数据"
+            )
         if test_metrics["annual_sharpe"] < self.policy.minimum_test_sharpe:
             failures.append("最终测试集Sharpe低于门槛")
         if abs(test_metrics["max_drawdown"]) > self.policy.maximum_test_drawdown:

@@ -68,3 +68,36 @@ def returns(values: Sequence[float]) -> List[float]:
     result.extend(values[i] / values[i - 1] - 1 for i in range(1, len(values)))
     return result
 
+
+def momentum(values: Sequence[float], window: int) -> List[MaybeFloat]:
+    """Trailing simple return using only the current and past prices."""
+    if window <= 0:
+        raise ValueError("window must be positive")
+    result: List[MaybeFloat] = []
+    for index, value in enumerate(values):
+        if index < window:
+            result.append(None)
+        else:
+            result.append(value / values[index - window] - 1)
+    return result
+
+
+def realized_volatility(
+    values: Sequence[float], window: int, periods_per_year: int = 365
+) -> List[MaybeFloat]:
+    """Annualized trailing volatility from exactly ``window`` past returns."""
+    if window < 2:
+        raise ValueError("window must be at least 2")
+    if periods_per_year <= 0:
+        raise ValueError("periods_per_year must be positive")
+    daily_returns = returns(values)
+    result: List[MaybeFloat] = []
+    for index in range(len(values)):
+        if index < window:
+            result.append(None)
+            continue
+        sample = daily_returns[index - window + 1 : index + 1]
+        average = sum(sample) / len(sample)
+        variance = sum((value - average) ** 2 for value in sample) / (len(sample) - 1)
+        result.append(math.sqrt(variance * periods_per_year))
+    return result

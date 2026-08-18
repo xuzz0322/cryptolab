@@ -192,6 +192,24 @@ flowchart LR
 
 最终测试集不是调参集。每次查看最终测试结果都必须计入真实试验次数；少报候选、删除失败版本或根据测试结果修改阈值均视为研究失败。当前规则策略没有重叠标签，未来AI标签若覆盖`[t,t+h]`，还必须使用purge与embargo避免相邻折泄漏。
 
+### research-v2边界
+
+v2保持交易架构不变，只扩展策略与离线研究层：
+
+```text
+OHLCV
+  → 长期SMA趋势状态
+  → 中期动量确认
+  → 实现波动率过滤
+  → 进入/退出滞回
+  → Signal(target_weight, reason)
+  → 原有组合构建、独立风控、OMS、执行与账本
+```
+
+冻结配置`research_config_v2.json`包含11个已披露的v1候选和6个`regime_trend`候选，共17次并列试验。它不会删除失败版本，也不会降低DSR、PBO、Holm、回撤、成本压力或跨币种门槛。
+
+截至2026-08-15的历史最终区间已经被v1研究查看，属于污染测试区间。`historical_test_is_pristine=false`使v2报告强制披露这一点：历史报告只能审计策略行为和统计稳健性，部署所需的纯净证据必须由2026-08-15之后的前向数据提供。研究失败不会触发治理晋级、交易开关或Exchange Adapter。
+
 ## 分阶段上线门禁
 
 ```text
@@ -255,7 +273,7 @@ await engine.run()
 | REST API限流器 | `quant_system/rate_limit.py` |
 | 外部告警 | `quant_system/alerts.py` |
 | 长时间运行证据 | `quant_system/evidence.py` |
-| 过拟合研究流水线 | `quant_system/research.py`、`research_config.example.json` |
+| 过拟合研究流水线 | `quant_system/research.py`、`research_config.example.json`、`research_config_v2.json` |
 
 ## 当前边界
 

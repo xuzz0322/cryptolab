@@ -11,7 +11,7 @@ from urllib.request import Request, urlopen
 from quant_system.api import run_backtest, serve
 from quant_system.backtest import BacktestEngine
 from quant_system.data import generate_market_data, load_csv
-from quant_system.indicators import rsi, sma
+from quant_system.indicators import momentum, realized_volatility, rsi, sma
 from quant_system.models import BacktestConfig
 from quant_system.broker import SimulatedBroker
 from quant_system.models import Bar
@@ -50,7 +50,7 @@ from quant_system.providers import CachedMarketDataProvider, MarketDataProvider,
 from quant_system.providers import BinanceSpotProvider, CoinbaseSpotProvider, MarketDataError, PublicCryptoProvider
 from quant_system.instruments import get_instrument
 from quant_system.market_rules import CryptoSpotRules
-from quant_system.strategies import MovingAverageCrossStrategy, create_strategy
+from quant_system.strategies import MovingAverageCrossStrategy, RegimeTrendStrategy, create_strategy
 
 
 class IndicatorTests(unittest.TestCase):
@@ -60,6 +60,76 @@ class IndicatorTests(unittest.TestCase):
     def test_rsi_in_strong_uptrend(self):
         values = rsi(list(range(1, 30)), 14)
         self.assertEqual(values[-1], 100.0)
+
+    def test_momentum_and_crypto_realized_volatility_are_causal(self):
+        values = [100, 101, 103, 102, 106]
+        values_momentum = momentum(values, 2)
+        volatility = realized_volatility(values, 3, periods_per_year=365)
+        self.assertEqual(values_momentum[:2], [None, None])
+        self.assertAlmostEqual(values_momentum[2], 0.03)
+        self.assertEqual(volatility[:3], [None, None, None])
+        self.assertGreater(volatility[-1], 0)
+
+
+class RegimeTrendStrategyTests(unittest.TestCase):
+    @staticmethod
+    def bars(prices):
+        start = date(2025, 1, 1)
+        return [
+            Bar(start + timedelta(days=index), price, price * 1.01, price * 0.99, price, 1000)
+            for index, price in enumerate(prices)
+        ]
+
+    def test_enters_holds_with_hysteresis_and_exits(self):
+        strategy = RegimeTrendStrategy(
+            long_window=5,
+            momentum_window=3,
+            volatility_window=3,
+            entry_momentum=0.02,
+            exit_momentum=-0.05,
+            entry_trend_buffer=0.01,
+            exit_trend_buffer=0.02,
+            max_annualized_volatility=5.0,
+            target_weight=0.7,
+        )
+        rising = [100, 102, 104, 106, 108, 110, 112, 113]
+        held = rising + [112.5]
+        held_signals = strategy.generate_signals(self.bars(held))
+        self.assertEqual(held_signals[-1].target_weight, 0.7)
+        self.assertIn("滞回", held_signals[-1].reason)
+        exited = strategy.generate_signals(self.bars(held + [80]))
+        self.assertEqual(exited[-1].target_weight, 0.0)
+        self.assertIn("退出", exited[-1].reason)
+
+    def test_warmup_volatility_filter_and_no_future_leakage(self):
+        strategy = RegimeTrendStrategy(
+            long_window=5,
+            momentum_window=3,
+            volatility_window=3,
+            entry_momentum=0.01,
+            max_annualized_volatility=0.05,
+        )
+        prices = [100, 120, 105, 130, 112, 140, 120, 150, 125, 155]
+        signals = strategy.generate_signals(self.bars(prices))
+        self.assertTrue(all(signal.target_weight == 0 for signal in signals[:5]))
+        self.assertEqual(signals[-1].target_weight, 0.0)
+
+        normal = RegimeTrendStrategy(
+            long_window=5, momentum_window=3, volatility_window=3,
+            entry_momentum=0.01, max_annualized_volatility=5.0,
+        )
+        original = normal.generate_signals(self.bars([100 + index for index in range(20)]))
+        changed = normal.generate_signals(self.bars([100 + index for index in range(19)] + [500]))
+        self.assertEqual(original[:-1], changed[:-1])
+
+    def test_rejects_invalid_parameters_and_factory_registers_strategy(self):
+        with self.assertRaises(ValueError):
+            RegimeTrendStrategy(long_window=10, momentum_window=20)
+        with self.assertRaises(ValueError):
+            RegimeTrendStrategy(entry_momentum=-0.1, exit_momentum=0.1)
+        with self.assertRaises(ValueError):
+            RegimeTrendStrategy(target_weight=1.1)
+        self.assertIsInstance(create_strategy("regime_trend"), RegimeTrendStrategy)
 
 
 class DataTests(unittest.TestCase):

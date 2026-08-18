@@ -44,8 +44,8 @@ print(result.metrics)
 | --- | --- | --- |
 | 币对主数据 | BTC/USDT、ETH/USDT、SOL/USDT 的价格与数量精度 | 交易数量必须按 step size 截断，同时满足最小名义金额 |
 | 数据层 | Coinbase/Binance 公开日线、CSV、缓存、模拟数据 | 交易所原始数据统一为 UTC、时间升序的 OHLCV，并支持行情源回退 |
-| 指标层 | SMA、EMA、滚动标准差、RSI、收益率 | 指标只使用当日及历史数据，不读取未来数据 |
-| 策略层 | 双均线趋势、RSI 均值回归、布林带均值回归 | 策略只输出目标仓位，与撮合和账户解耦 |
+| 指标层 | SMA、EMA、滚动标准差、RSI、收益率、动量、实现波动率 | 指标只使用当日及历史数据，不读取未来数据 |
+| 策略层 | 双均线趋势、RSI/布林带均值回归、市场状态趋势 | 策略只输出目标仓位，与撮合和账户解耦 |
 | AI策略层 | 特征工程、ProbabilityModel、概率阈值和滞回控制 | 模型只输出概率，不能访问账户、密钥或交易接口 |
 | 回测层 | 事件驱动、次日开盘成交、组合账户记账 | T 日收盘生成信号，下一交易日开盘发单，避免前视偏差 |
 | OMS | 订单状态机、幂等键、部分成交、撤单、拒单、SQLite 恢复 | 订单和成交分离，一张订单可以对应多笔 Fill |
@@ -93,7 +93,7 @@ quant_system/
 │   ├── binance.py   # Binance Spot REST与WebSocket用户流适配器
 │   └── okx.py       # OKX V5 Spot Demo/Live REST与私有用户流
 ├── indicators.py    # 技术指标
-├── strategies.py    # 策略接口及四个示例策略
+├── strategies.py    # 策略接口及四个规则策略
 ├── ai_strategy.py   # AI特征、模型接口和概率策略
 ├── runner.py        # 默认Dry Run的异步策略运行器
 ├── risk.py          # 交易前风控
@@ -416,6 +416,20 @@ runtime/research-v1/
 ```
 
 只有`research_report.json`中的`passed`为`true`时，才能把报告绑定到完全相同的策略指纹。治理服务应使用`ValidationCriteria(require_research_report=True)`并调用`record_research_validation()`；修改任何策略参数都会导致指纹不匹配。服务器包若命名为`cryptolab`，将上述命令中的`quant_system`替换为`cryptolab`。
+
+### research-v2：市场状态趋势策略
+
+v2没有改动事件总线、独立风控、OMS、账本或Exchange Adapter，只在策略和离线研究层增加`regime_trend`。该策略为long-only，使用长期SMA识别趋势、中期动量确认方向、年化实现波动率过滤高风险状态，并使用不同的进入/退出阈值形成滞回，减少阈值附近反复交易。策略仍只返回`Signal(target_weight, reason)`；最终仓位由回测配置和独立风控限制。
+
+`research_config_v2.json`是冻结的预注册配置，共保留17个候选：11个v1历史候选和6个v2市场状态候选。失败候选也必须保留，以真实反映多重试验和选择偏差。运行一次正式审计：
+
+```bash
+python3 -m quant_system.research \
+  --config research_config_v2.json \
+  --output-dir runtime/research-v2
+```
+
+重要：v1已经查看过2025-04-20至2026-08-15的结果，因此该区间对v2不再是纯净最终测试集。配置中的`historical_test_is_pristine=false`会把这一事实写入报告；v2历史运行只能用于统计审计，不能据此晋级。真正的最终证据必须来自2026-08-15之后、在冻结配置后才产生的前向数据。不得根据本次报告修改参数后重跑并仍称其为同一轮测试。
 
 ## 保留的 A 股迁移接口
 
